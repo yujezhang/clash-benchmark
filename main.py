@@ -301,13 +301,15 @@ async def run(args) -> None:
         ap.compute_aggregate()
 
     # --- Output ---
-    print_airport_table(airports, enable_speed)
+    # Node detail first, airport comparison last so the summary is visible
+    # at the bottom of the terminal when execution finishes.
     print_node_table(
         airports,
         enable_speed,
         sort_by=args.sort_by,
         filter_dead=args.filter_dead,
     )
+    print_airport_table(airports, enable_speed)
     print_footer(tested_at)
 
     # --- Export ---
