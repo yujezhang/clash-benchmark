@@ -1,0 +1,13 @@
+sources:
+  - name: airport-a
+    type: file
+    path: /path/to/airport-a.yaml
+
+  - name: airport-b
+    type: file
+    path: /path/to/airport-b.yaml
+
+  # URL example (token is sensitive, keep this file out of git):
+  # - name: airport-c
+  #   type: url
+  #   url: https://example.com/api/v1/client/subscribe?token=YOUR_TOKEN_HERE

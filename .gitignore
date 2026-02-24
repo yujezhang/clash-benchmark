@@ -1,0 +1,19 @@
+# sources.yaml contains subscription URLs with tokens — keep it private
+sources.yaml
+
+# macOS metadata
+.DS_Store
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Test result exports
+results_*.json
+results_*.csv
+
+# Virtual environment
+.venv/
+venv/
