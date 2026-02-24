@@ -14,7 +14,7 @@
 
 ### 项目简介
 
-一个用于客观、量化评估 Clash 机场订阅质量的命令行工具。通过测量延迟（中位数、P95、抖动）、下载速度（国际/国内）和节点可用率，帮助你用数据而非感觉来比较不同机场的性能。
+Clash 机场性能基准测试工具：一键对比多个机场延迟（Median/P95/Jitter）、带宽吞吐及节点可用率。
 
 ### 前置条件
 
@@ -108,7 +108,7 @@ python main.py [FILE_OR_URL ...] [OPTIONS]
 
 ### Overview
 
-A command-line tool for objectively and quantitatively benchmarking Clash proxy subscription files ("airports"). Measures latency (median, P95, jitter), download speed (international/domestic), and node availability to help you compare airports with data instead of gut feeling.
+Clash airport benchmarking tool: compare multiple subscriptions in one run — latency (Median/P95/Jitter), throughput, and node availability.
 
 ### Prerequisites
 
