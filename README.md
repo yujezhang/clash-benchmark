@@ -27,8 +27,14 @@
 ### 快速开始
 
 ```bash
-# 直接测试订阅文件
+# 直接测试本地订阅文件
 python main.py /path/to/airport-a.yaml /path/to/airport-b.yaml
+
+# 直接测试订阅链接
+python main.py https://airport-a.com/subscribe/abc123def456 https://airport-b.com/subscribe/abc123def456
+
+# 混合使用（文件 + 链接）
+python main.py /path/to/airport-a.yaml https://airport-b.com/subscribe/abc123def456
 
 # 仅测延迟（更快）
 python main.py /path/to/airport.yaml --no-speed
@@ -44,7 +50,7 @@ python main.py
 
 ### sources.yaml 配置
 
-推荐将订阅来源写入 `sources.yaml`，避免在命令行中暴露 token：
+推荐将订阅来源写入 `sources.yaml`，统一管理多个订阅：
 
 ```yaml
 sources:
@@ -54,7 +60,7 @@ sources:
 
   - name: airport-b
     type: url
-    url: https://example.com/subscribe?token=YOUR_TOKEN
+    url: https://airport-b.com/subscribe/abc123def456
 ```
 
 ### 完整用法
@@ -115,8 +121,14 @@ A command-line tool for objectively and quantitatively benchmarking Clash proxy 
 ### Quick Start
 
 ```bash
-# Test subscription files directly
+# Test a local subscription file
 python main.py /path/to/airport-a.yaml /path/to/airport-b.yaml
+
+# Test a subscription URL directly
+python main.py https://airport-a.com/subscribe/abc123def456 https://airport-b.com/subscribe/abc123def456
+
+# Mix files and URLs
+python main.py /path/to/airport-a.yaml https://example.com/airport-b/abc123def456
 
 # Latency only (faster)
 python main.py /path/to/airport.yaml --no-speed
@@ -132,7 +144,7 @@ python main.py
 
 ### sources.yaml Configuration
 
-Store your subscription sources in `sources.yaml` to avoid exposing tokens on the command line:
+Store your subscription sources in `sources.yaml` to manage multiple subscriptions in one place:
 
 ```yaml
 sources:
@@ -142,7 +154,7 @@ sources:
 
   - name: airport-b
     type: url
-    url: https://example.com/subscribe?token=YOUR_TOKEN
+    url: https://airport-b.com/subscribe/abc123def456
 ```
 
 > `sources.yaml` is listed in `.gitignore` and will not be committed.
