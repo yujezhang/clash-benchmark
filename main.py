@@ -218,8 +218,9 @@ async def run(args) -> None:
     )
 
     # --- Phase 1: Latency ---
+    current_phase = 1
     console.print()
-    console.print(t("phase_latency", total=total_phases, rounds=config.latency_rounds))
+    console.print(t("phase_latency", current=current_phase, total=total_phases, rounds=config.latency_rounds))
     with Progress(
         SpinnerColumn(),
         BarColumn(),
@@ -239,7 +240,8 @@ async def run(args) -> None:
     # --- Phase 2: Speed ---
     socks5_urls: dict[str, str] = {}
     if enable_speed:
-        console.print(t("phase_speed", total=total_phases))
+        current_phase += 1
+        console.print(t("phase_speed", current=current_phase, total=total_phases))
         with Progress(
             SpinnerColumn(),
             BarColumn(),
@@ -263,9 +265,10 @@ async def run(args) -> None:
 
     # --- Phase 3: Geolocation ---
     if enable_geo:
+        current_phase += 1
         alive_metrics = [m for m in metrics_map.values() if m.is_alive]
         dead_count = len(metrics_map) - len(alive_metrics)
-        console.print(t("phase_geo", total=total_phases))
+        console.print(t("phase_geo", current=current_phase, total=total_phases))
         if dead_count:
             console.print(t("phase_geo_skip_dead", dead=dead_count))
 

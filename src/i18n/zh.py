@@ -16,9 +16,9 @@ STRINGS = {
     "sources_file_not_found": "错误：找不到订阅配置文件：{path}",
 
     # Test phases
-    "phase_latency": "[1/{total}] 正在测试延迟（每节点 {rounds} 轮）...",
-    "phase_speed": "[2/{total}] 正在测试下载速度...",
-    "phase_geo": "[3/{total}] 正在查询地理位置...",
+    "phase_latency": "[{current}/{total}] 正在测试延迟（每节点 {rounds} 轮）...",
+    "phase_speed": "[{current}/{total}] 正在测试下载速度...",
+    "phase_geo": "[{current}/{total}] 正在查询地理位置...",
     "phase_geo_skip_dead": "  （{dead} 个不可用节点已跳过）",
 
     # Table headers - airport comparison

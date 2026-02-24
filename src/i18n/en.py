@@ -16,9 +16,9 @@ STRINGS = {
     "sources_file_not_found": "Error: sources file not found: {path}",
 
     # Test phases
-    "phase_latency": "[1/{total}] Running latency tests ({rounds} rounds each)...",
-    "phase_speed": "[2/{total}] Running speed tests...",
-    "phase_geo": "[3/{total}] Fetching geolocation...",
+    "phase_latency": "[{current}/{total}] Running latency tests ({rounds} rounds each)...",
+    "phase_speed": "[{current}/{total}] Running speed tests...",
+    "phase_geo": "[{current}/{total}] Fetching geolocation...",
     "phase_geo_skip_dead": "  ({dead} dead nodes skipped)",
 
     # Table headers - airport comparison
