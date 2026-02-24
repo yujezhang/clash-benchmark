@@ -4,6 +4,12 @@
 
 ---
 
+<p align="center">
+  <img src="demo.gif" alt="Clash Benchmark Demo" width="1000">
+</p>
+
+---
+
 ## 中文
 
 ### 项目简介
