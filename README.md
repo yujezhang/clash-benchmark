@@ -25,6 +25,8 @@ Clash 机场性能基准测试工具：一键对比多个机场延迟（Median/P
   ```
   其他平台请参考 [mihomo 官方文档](https://github.com/MetaCubeX/mihomo)
 
+  > 程序会自动在 `$PATH` 中查找 `mihomo`。若未加入 PATH（如手动下载的二进制），需通过 `--mihomo /path/to/mihomo` 手动指定路径。
+
 - Python 依赖：
   ```bash
   pip3 install -r requirements.txt
@@ -118,6 +120,8 @@ Clash airport benchmarking tool: compare multiple subscriptions in one run — l
   brew install mihomo   # macOS
   ```
   For other platforms, see [mihomo releases](https://github.com/MetaCubeX/mihomo)
+
+  > The program looks for `mihomo` in `$PATH`. If it is not on PATH (e.g. a manually downloaded binary), specify the location with `--mihomo /path/to/mihomo`.
 
 - Python dependencies:
   ```bash
