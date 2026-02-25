@@ -17,7 +17,7 @@ STRINGS = {
 
     # Test phases
     "phase_latency": "[{current}/{total}] Running latency tests ({rounds} rounds each)...",
-    "phase_speed": "[{current}/{total}] Running speed tests (~10s per node)...",
+    "phase_speed": "[{current}/{total}] Running speed tests (~8s per node)...",
     "phase_geo": "[{current}/{total}] Fetching geolocation...",
     "phase_geo_skip_dead": "  ({dead} dead nodes skipped)",
 

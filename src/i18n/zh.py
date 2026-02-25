@@ -17,7 +17,7 @@ STRINGS = {
 
     # Test phases
     "phase_latency": "[{current}/{total}] 正在测试延迟（每节点 {rounds} 轮）...",
-    "phase_speed": "[{current}/{total}] 正在测试下载速度（每节点约 10 秒）...",
+    "phase_speed": "[{current}/{total}] 正在测试下载速度（每节点约 8 秒）...",
     "phase_geo": "[{current}/{total}] 正在查询地理位置...",
     "phase_geo_skip_dead": "  （{dead} 个不可用节点已跳过）",
 
