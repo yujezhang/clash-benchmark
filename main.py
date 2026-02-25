@@ -58,7 +58,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--export-file", default=None, metavar="PATH", help="Export file path")
     p.add_argument(
-        "--concurrency",
+        "--latency-concurrency",
         type=int,
         default=30,
         metavar="N",
@@ -207,7 +207,7 @@ async def run(args) -> None:
         metrics_map[name] = m
 
     config = TestConfig(
-        latency_concurrency=args.concurrency,
+        latency_concurrency=args.latency_concurrency,
         speed_connections=args.speed_connections,
         enable_speed=enable_speed,
         enable_geo=enable_geo,

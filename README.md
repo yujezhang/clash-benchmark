@@ -82,7 +82,7 @@ python main.py [FILE_OR_URL ...] [OPTIONS]
   --no-geo              跳过 IP 地理位置查询
   --export JSON|CSV     导出结果文件
   --export-file PATH    导出文件路径
-  --concurrency N       并发延迟测试数（默认：30）
+  --latency-concurrency N 延迟测试并发数（默认：30）
   --speed-connections N 每次测速的并行 TCP 连接数（默认：16）
   --sort-by FIELD       节点排序字段：latency|p95|speed|name（默认：latency）
   --filter-dead         隐藏不可用节点
@@ -179,7 +179,7 @@ Options:
   --no-geo              Skip IP geolocation
   --export JSON|CSV     Export results to file
   --export-file PATH    Export file path
-  --concurrency N       Max parallel latency tests (default: 30)
+  --latency-concurrency N Max parallel latency tests (default: 30)
   --speed-connections N Parallel TCP connections per speed measurement (default: 16)
   --sort-by FIELD       Sort nodes by: latency|p95|speed|name (default: latency)
   --filter-dead         Hide dead nodes from output
