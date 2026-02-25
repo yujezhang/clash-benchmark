@@ -149,8 +149,7 @@ def print_airport_table(airports: list[AirportMetrics], enable_speed: bool) -> N
     table.add_column(t("col_p95_lat"), justify="right", min_width=10)
     table.add_column(t("col_jitter"), justify="right", min_width=8)
     if enable_speed:
-        table.add_column(t("col_speed_intl"), justify="right", min_width=13)
-        table.add_column(t("col_speed_domestic"), justify="right", min_width=13)
+        table.add_column(t("col_speed"), justify="right", min_width=13)
 
     dead_label = t("dead")
     na_blocked = t("na_blocked")
@@ -167,12 +166,8 @@ def print_airport_table(airports: list[AirportMetrics], enable_speed: bool) -> N
         ]
         if enable_speed:
             row.append(
-                (_fmt_speed(ap.avg_speed_intl, False, na_blocked, na),
-                 _speed_style(ap.avg_speed_intl))
-            )
-            row.append(
-                (_fmt_speed(ap.avg_speed_domestic, False, na_blocked, na),
-                 _speed_style(ap.avg_speed_domestic))
+                (_fmt_speed(ap.avg_speed, False, na_blocked, na),
+                 _speed_style(ap.avg_speed))
             )
 
         # rich accepts (text, style) tuples or plain strings
@@ -213,7 +208,7 @@ def print_node_table(
         if sort_by == "p95":
             return (0, m.latency_p95 or float("inf"))
         if sort_by == "speed":
-            return (0, -(m.speed_intl_mbps or 0))
+            return (0, -(m.speed_mbps or 0))
         if sort_by == "name":
             return (0, m.node_name)
         return (0, m.latency_median or float("inf"))
@@ -240,8 +235,7 @@ def print_node_table(
     table.add_column(t("col_jitter"), justify="right", min_width=7)
     table.add_column(t("col_loss"), justify="right", min_width=6)
     if enable_speed:
-        table.add_column(t("col_speed_intl"), justify="right", min_width=10)
-        table.add_column(t("col_speed_domestic"), justify="right", min_width=10)
+        table.add_column(t("col_speed"), justify="right", min_width=10)
     table.add_column(t("col_region"), min_width=14)
 
     dead_label = t("dead")
@@ -276,15 +270,10 @@ def print_node_table(
         if enable_speed:
             if m.is_alive:
                 row.append(Text(
-                    _fmt_speed(m.speed_intl_mbps, m.speed_intl_blocked, na_blocked, na),
-                    style=_speed_style(m.speed_intl_mbps if not m.speed_intl_blocked else None),
-                ))
-                row.append(Text(
-                    _fmt_speed(m.speed_domestic_mbps, m.speed_domestic_blocked, na_blocked, na),
-                    style=_speed_style(m.speed_domestic_mbps if not m.speed_domestic_blocked else None),
+                    _fmt_speed(m.speed_mbps, m.speed_blocked, na_blocked, na),
+                    style=_speed_style(m.speed_mbps if not m.speed_blocked else None),
                 ))
             else:
-                row.append(Text("-"))
                 row.append(Text("-"))
 
         row.append(_fmt_region(m))
@@ -325,10 +314,8 @@ def export_json(airports: list[AirportMetrics], path: str) -> None:
             "latency_p95_ms": m.latency_p95,
             "latency_jitter_ms": m.latency_jitter,
             "latency_loss_rate": m.latency_loss_rate,
-            "speed_intl_mbps": m.speed_intl_mbps,
-            "speed_intl_blocked": m.speed_intl_blocked,
-            "speed_domestic_mbps": m.speed_domestic_mbps,
-            "speed_domestic_blocked": m.speed_domestic_blocked,
+            "speed_mbps": m.speed_mbps,
+            "speed_blocked": m.speed_blocked,
             "exit_ip": m.exit_ip,
             "exit_country": m.exit_country,
             "exit_city": m.exit_city,
@@ -345,8 +332,7 @@ def export_json(airports: list[AirportMetrics], path: str) -> None:
             "median_latency_ms": ap.median_latency,
             "p95_latency_ms": ap.p95_latency,
             "avg_jitter_ms": ap.avg_jitter,
-            "avg_speed_intl_mbps": ap.avg_speed_intl,
-            "avg_speed_domestic_mbps": ap.avg_speed_domestic,
+            "avg_speed_mbps": ap.avg_speed,
             "nodes": [node_to_dict(n) for n in ap.nodes],
         }
 
@@ -361,8 +347,7 @@ def export_csv(airports: list[AirportMetrics], path: str) -> None:
         "source", "node_name", "node_type", "server", "port",
         "is_alive", "latency_median_ms", "latency_p95_ms",
         "latency_jitter_ms", "latency_loss_rate",
-        "speed_intl_mbps", "speed_intl_blocked",
-        "speed_domestic_mbps", "speed_domestic_blocked",
+        "speed_mbps", "speed_blocked",
         "exit_ip", "exit_country", "exit_city", "exit_isp", "tested_at",
     ]
     with open(path, "w", newline="", encoding="utf-8") as f:
@@ -381,10 +366,8 @@ def export_csv(airports: list[AirportMetrics], path: str) -> None:
                     "latency_p95_ms": m.latency_p95,
                     "latency_jitter_ms": m.latency_jitter,
                     "latency_loss_rate": m.latency_loss_rate,
-                    "speed_intl_mbps": m.speed_intl_mbps,
-                    "speed_intl_blocked": m.speed_intl_blocked,
-                    "speed_domestic_mbps": m.speed_domestic_mbps,
-                    "speed_domestic_blocked": m.speed_domestic_blocked,
+                    "speed_mbps": m.speed_mbps,
+                    "speed_blocked": m.speed_blocked,
                     "exit_ip": m.exit_ip,
                     "exit_country": m.exit_country,
                     "exit_city": m.exit_city,

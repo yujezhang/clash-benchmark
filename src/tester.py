@@ -11,10 +11,20 @@ from aiohttp_socks import ProxyConnector
 from .metrics import NodeMetrics
 from .mihomo_manager import MihomoInstance
 
-# Speed test URLs: (label, url, bytes)
-_SPEED_URLS = [
-    ("intl", "https://speed.cloudflare.com/__down?bytes=10000000", 10_000_000),
-    ("domestic", "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb", 10_000_000),
+# ---------------------------------------------------------------------------
+# Speed test URL fallback list
+# ---------------------------------------------------------------------------
+# Cloudflare has edge PoPs in every major city, so downloads arrive from a
+# server near the proxy exit IP — matching how speedtest.net picks its
+# nearest server.  This is critical: a UK-only CDN (ThinkBroadband) caps
+# Asian-exit proxies at ~30 Mbps due to cross-continent latency, while
+# Cloudflare can saturate the proxy's actual bandwidth.
+# URLs are tried in order; the first that responds is used for the full
+# measurement.
+_SPEED_URLS: list[str] = [
+    "https://speed.cloudflare.com/__down?bytes=100000000",
+    "http://cachefly.cachefly.net/100mb.test",
+    "http://download.thinkbroadband.com/100MB.zip",
 ]
 
 
@@ -24,11 +34,16 @@ class TestConfig:
     latency_rounds: int = 10
     latency_timeout_ms: int = 5000
     latency_concurrency: int = 30
-    speed_workers: int = 5
-    speed_timeout_s: int = 20
+    speed_workers: int = 1
+    speed_timeout_s: int = 10   # download duration (seconds)
+    speed_connections: int = 16  # parallel TCP connections per measurement
     enable_speed: bool = True
     enable_geo: bool = True
 
+
+# ---------------------------------------------------------------------------
+# Latency testing
+# ---------------------------------------------------------------------------
 
 async def run_latency_tests(
     nodes: list[dict],
@@ -38,41 +53,63 @@ async def run_latency_tests(
     progress_cb: Optional[Callable[[int], None]] = None,
 ) -> None:
     """
-    Load all nodes into one mihomo instance, then measure latency for each node
-    using the REST API with latency_rounds rounds per node.
-    Results are written into metrics_map in-place.
+    Load all nodes into one mihomo instance, then measure latency for each
+    node with latency_rounds rounds. All (node x round) API calls are fired
+    concurrently (limited by semaphore) for maximum throughput.
     """
     async with MihomoInstance(nodes, mihomo_bin) as instance:
         sem = asyncio.Semaphore(config.latency_concurrency)
+        round_timeout = config.latency_timeout_ms / 1000 + 5
 
-        async def test_one(node: dict) -> None:
-            name = node["name"]
+        # Pre-allocate result slots: node_name -> [None] * rounds
+        results: dict[str, list[Optional[float]]] = {
+            n["name"]: [None] * config.latency_rounds for n in nodes
+        }
+        # Track completed rounds per node for progress reporting
+        remaining: dict[str, int] = {
+            n["name"]: config.latency_rounds for n in nodes
+        }
+
+        async def test_one_round(node_name: str, round_idx: int) -> None:
             async with sem:
-                async with aiohttp.ClientSession() as session:
-                    samples: list[float] = []
-                    timeouts = 0
-                    for _ in range(config.latency_rounds):
-                        result = await instance.test_latency(
-                            name,
+                try:
+                    result = await asyncio.wait_for(
+                        instance.test_latency(
+                            node_name,
                             test_url=config.latency_url,
                             timeout_ms=config.latency_timeout_ms,
-                            session=session,
-                        )
-                        if result is not None:
-                            samples.append(result)
-                        else:
-                            timeouts += 1
+                        ),
+                        timeout=round_timeout,
+                    )
+                except asyncio.TimeoutError:
+                    result = None
+                results[node_name][round_idx] = result
+                remaining[node_name] -= 1
 
-                    m = metrics_map[name]
-                    m.latency_samples = samples
-                    m.latency_loss_rate = timeouts / config.latency_rounds
-                    m.compute_latency_stats()
+        # Fire all (node x round) tasks concurrently
+        tasks = [
+            test_one_round(node["name"], r)
+            for node in nodes
+            for r in range(config.latency_rounds)
+        ]
+        await asyncio.gather(*tasks)
 
+        # Aggregate results per node
+        for node in nodes:
+            name = node["name"]
+            m = metrics_map[name]
+            samples = [v for v in results[name] if v is not None]
+            timeouts = config.latency_rounds - len(samples)
+            m.latency_samples = samples
+            m.latency_loss_rate = timeouts / config.latency_rounds
+            m.compute_latency_stats()
             if progress_cb:
                 progress_cb(1)
 
-        await asyncio.gather(*[test_one(n) for n in nodes])
 
+# ---------------------------------------------------------------------------
+# Speed testing
+# ---------------------------------------------------------------------------
 
 async def run_speed_tests(
     nodes: list[dict],
@@ -93,8 +130,6 @@ async def run_speed_tests(
     queue: asyncio.Queue = asyncio.Queue()
     for node in alive_nodes:
         await queue.put(node)
-
-    # Sentinel values to stop workers
     for _ in range(config.speed_workers):
         await queue.put(None)
 
@@ -107,97 +142,162 @@ async def run_speed_tests(
                         break
                     name = node["name"]
                     m = metrics_map[name]
-                    await instance.select_node(name, ctrl_session)
-                    await asyncio.sleep(0.3)  # brief settle time after switching
-
-                    for label, url, expected_bytes in _SPEED_URLS:
-                        mbps = await _measure_speed(
-                            instance.socks5_url,
-                            url,
-                            expected_bytes,
-                            config.speed_timeout_s,
+                    # Timeout: probe (~10s worst case) + measurement + buffer
+                    node_timeout = 10 + config.speed_timeout_s + 20
+                    try:
+                        await asyncio.wait_for(
+                            _test_node_speed(
+                                instance, ctrl_session, name, m, config
+                            ),
+                            timeout=node_timeout,
                         )
-                        blocked = mbps is None and await _is_blocked(
-                            instance.socks5_url, url, config.speed_timeout_s
-                        )
-                        if label == "intl":
-                            m.speed_intl_mbps = mbps
-                            m.speed_intl_blocked = blocked
-                        else:
-                            m.speed_domestic_mbps = mbps
-                            m.speed_domestic_blocked = blocked
-
-                    if progress_cb:
-                        progress_cb(1)
+                    except asyncio.TimeoutError:
+                        pass
+                    except asyncio.CancelledError:
+                        break
+                    finally:
+                        if progress_cb:
+                            progress_cb(1)
 
     await asyncio.gather(*[worker() for _ in range(config.speed_workers)])
 
 
+async def _test_node_speed(
+    instance: MihomoInstance,
+    ctrl_session: aiohttp.ClientSession,
+    name: str,
+    m: NodeMetrics,
+    config: TestConfig,
+) -> None:
+    """Switch mihomo to the given node and run a single speed test."""
+    await instance.select_node(name, ctrl_session)
+    await asyncio.sleep(0.3)
+
+    mbps = await _measure_speed(
+        instance.socks5_url,
+        _SPEED_URLS,
+        config.speed_timeout_s,
+        config.speed_connections,
+    )
+    m.speed_mbps = mbps
+    m.speed_blocked = mbps is None
+
+
 async def _measure_speed(
     socks5_url: str,
-    url: str,
-    expected_bytes: int,
-    timeout_s: int,
+    urls: list[str],
+    duration_s: int,
+    connections: int,
 ) -> Optional[float]:
     """
-    Download up to expected_bytes through socks5_url proxy.
-    Performs two downloads and returns the lower Mbps value (QoS detection).
-    Returns None on connection failure.
+    Probe URLs in order to find the first reachable one, then run a full
+    time-based parallel download. Returns speed in Mbps, or None.
     """
-    results = []
-    for _ in range(2):
-        mbps = await _single_download(socks5_url, url, expected_bytes, timeout_s)
-        if mbps is None:
-            return None
-        results.append(mbps)
-    return min(results)
+    url = await _probe_url(socks5_url, urls)
+    if url is None:
+        return None
+    return await _parallel_speed(socks5_url, url, duration_s, connections)
 
 
-async def _single_download(
+async def _probe_url(socks5_url: str, urls: list[str]) -> Optional[str]:
+    """
+    Try each URL with a small request through the proxy.
+    Return the first URL that responds successfully.
+    """
+    for url in urls:
+        connector = ProxyConnector.from_url(socks5_url)
+        try:
+            async with aiohttp.ClientSession(
+                connector=connector,
+                timeout=aiohttp.ClientTimeout(
+                    total=10, sock_connect=5, sock_read=5
+                ),
+            ) as session:
+                async with session.get(url) as resp:
+                    if resp.status in (200, 206):
+                        await resp.content.read(1024)
+                        return url
+        except BaseException:
+            continue
+    return None
+
+
+async def _parallel_speed(
     socks5_url: str,
     url: str,
-    max_bytes: int,
-    timeout_s: int,
+    duration_s: int,
+    connections: int,
 ) -> Optional[float]:
-    """Download through proxy, return Mbps or None on failure."""
+    """
+    Measure aggregate download speed using parallel TCP connections.
+    Each connection downloads the file in a loop for duration_s seconds,
+    using HTTP keep-alive to maintain TCP congestion window across
+    re-downloads and avoid repeated slow-start.
+    Returns speed in Mbps, or None on failure.
+    """
+    start = time.monotonic()
+    deadline = start + duration_s
+    # Shared mutable counters: each connection accumulates bytes here.
+    # Reading counters is safe even if the owning task is cancelled.
+    counters = [[0] for _ in range(connections)]
+
+    tasks = [
+        asyncio.create_task(
+            _download_stream(socks5_url, url, deadline, counters[i])
+        )
+        for i in range(connections)
+    ]
+
+    # Tasks self-terminate at deadline. Safety timeout prevents indefinite hang.
     try:
-        connector = ProxyConnector.from_url(socks5_url)
-        async with aiohttp.ClientSession(
-            connector=connector,
-            timeout=aiohttp.ClientTimeout(total=timeout_s),
-        ) as session:
-            start = time.monotonic()
-            received = 0
-            async with session.get(url) as resp:
-                if resp.status >= 400:
-                    return None
-                async for chunk in resp.content.iter_chunked(65536):
-                    received += len(chunk)
-                    if received >= max_bytes:
-                        break
-            elapsed = time.monotonic() - start
-            if elapsed < 0.1 or received == 0:
-                return None
-            return (received * 8) / elapsed / 1_000_000  # Mbps
+        await asyncio.wait(tasks, timeout=duration_s + 15)
     except Exception:
+        pass
+
+    # Force-cancel any remaining stuck tasks
+    for t in tasks:
+        if not t.done():
+            t.cancel()
+    still_running = [t for t in tasks if not t.done()]
+    if still_running:
+        try:
+            await asyncio.wait(still_running, timeout=5)
+        except Exception:
+            pass
+
+    elapsed = time.monotonic() - start
+    total_bytes = sum(c[0] for c in counters)
+
+    if total_bytes == 0 or elapsed < 0.5:
         return None
+    return (total_bytes * 8) / elapsed / 1_000_000
 
 
-async def _is_blocked(socks5_url: str, url: str, timeout_s: int) -> bool:
+async def _download_stream(
+    socks5_url: str, url: str, deadline: float, counter: list[int]
+) -> None:
     """
-    Return True if the URL is reachable through the proxy but returns
-    an error (blocked), vs not reachable at all.
+    One persistent connection downloading url in a loop until deadline.
+    Uses HTTP keep-alive to reuse the TCP connection (and its congestion
+    window) across file re-downloads, avoiding repeated slow-start.
+    Bytes received are accumulated into counter[0].
     """
+    connector = ProxyConnector.from_url(socks5_url)
+    timeout = aiohttp.ClientTimeout(sock_connect=10, sock_read=5)
     try:
-        connector = ProxyConnector.from_url(socks5_url)
         async with aiohttp.ClientSession(
-            connector=connector,
-            timeout=aiohttp.ClientTimeout(total=min(timeout_s, 10)),
+            connector=connector, timeout=timeout
         ) as session:
-            async with session.head(url) as resp:
-                # Reachable but blocked (e.g. 403/451/connection reset)
-                return resp.status >= 400
-    except aiohttp.ClientResponseError:
-        return True
-    except Exception:
-        return False
+            while time.monotonic() < deadline:
+                async with session.get(url) as resp:
+                    if resp.status >= 400:
+                        return
+                    async for chunk in resp.content.iter_chunked(131072):
+                        counter[0] += len(chunk)
+                        if time.monotonic() >= deadline:
+                            return
+    except BaseException:
+        # Catches CancelledError (BaseException in Python 3.9+),
+        # aiohttp errors, and any cleanup-related exceptions.
+        # Byte counter already holds accumulated data.
+        pass

@@ -28,8 +28,7 @@ STRINGS = {
     "col_median_lat": "Median Lat",
     "col_p95_lat": "P95 Lat",
     "col_jitter": "Jitter",
-    "col_speed_intl": "Speed (Intl)",
-    "col_speed_domestic": "Speed (Dom)",
+    "col_speed": "Speed",
 
     # Table headers - node detail
     "table_node_title": "Node Details",

@@ -35,7 +35,9 @@ def find_mihomo(override: Optional[str] = None) -> str:
     if override:
         if os.path.isfile(override) and os.access(override, os.X_OK):
             return override
-        raise FileNotFoundError(f"Specified mihomo path not found or not executable: {override}")
+        raise FileNotFoundError(
+            f"Specified mihomo path not found or not executable: {override}"
+        )
     path = shutil.which("mihomo")
     if path:
         return path
@@ -56,7 +58,7 @@ def _build_config(nodes: list[dict], socks_port: int, api_port: int) -> str:
     config = {
         "mixed-port": socks_port,
         "allow-lan": False,
-        "mode": "global",
+        "mode": "rule",
         "log-level": "error",
         "external-controller": f"127.0.0.1:{api_port}",
         "dns": {"enable": False},
@@ -99,7 +101,9 @@ class MihomoInstance:
 
     async def start(self, ready_timeout: float = 10.0) -> None:
         """Write config, start mihomo, wait until REST API is ready."""
-        self._work_dir = tempfile.mkdtemp(prefix=f"clash-tester-{uuid.uuid4().hex[:8]}-")
+        self._work_dir = tempfile.mkdtemp(
+            prefix=f"clash-tester-{uuid.uuid4().hex[:8]}-"
+        )
         config_path = os.path.join(self._work_dir, "config.yaml")
         with open(config_path, "w", encoding="utf-8") as f:
             f.write(_build_config(self.nodes, self.socks_port, self.api_port))
@@ -116,7 +120,8 @@ class MihomoInstance:
             while asyncio.get_event_loop().time() < deadline:
                 try:
                     async with session.get(
-                        f"{self.api_base}/version", timeout=aiohttp.ClientTimeout(total=1)
+                        f"{self.api_base}/version",
+                        timeout=aiohttp.ClientTimeout(total=1),
                     ) as resp:
                         if resp.status == 200:
                             return
@@ -184,9 +189,7 @@ class MihomoInstance:
             if close_session:
                 await session.close()
 
-    async def select_node(
-        self, node_name: str, session: aiohttp.ClientSession
-    ) -> bool:
+    async def select_node(self, node_name: str, session: aiohttp.ClientSession) -> bool:
         """Switch test-group to the given node via REST API. Returns True on success."""
         url = f"{self.api_base}/proxies/test-group"
         try:
@@ -203,4 +206,5 @@ class MihomoInstance:
 def _url_encode(s: str) -> str:
     """Percent-encode a proxy name for use in a URL path segment."""
     from urllib.parse import quote
+
     return quote(s, safe="")

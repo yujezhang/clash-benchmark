@@ -67,9 +67,16 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--speed-workers",
         type=int,
-        default=5,
+        default=1,
         metavar="N",
-        help="Parallel speed test workers (default: 5)",
+        help="Parallel speed test workers — more workers = faster but less accurate (default: 1)",
+    )
+    p.add_argument(
+        "--speed-connections",
+        type=int,
+        default=16,
+        metavar="N",
+        help="Parallel TCP connections per speed measurement (default: 16)",
     )
     p.add_argument(
         "--sort-by",
@@ -209,6 +216,7 @@ async def run(args) -> None:
     config = TestConfig(
         latency_concurrency=args.concurrency,
         speed_workers=args.speed_workers,
+        speed_connections=args.speed_connections,
         enable_speed=enable_speed,
         enable_geo=enable_geo,
     )

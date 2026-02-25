@@ -23,11 +23,9 @@ class NodeMetrics:
     latency_jitter: Optional[float] = None   # stddev across samples
     latency_loss_rate: float = 1.0           # 0.0–1.0
 
-    # Speed (Mbps). None = not tested, "blocked" string handled in reporter.
-    speed_intl_mbps: Optional[float] = None
-    speed_intl_blocked: bool = False
-    speed_domestic_mbps: Optional[float] = None
-    speed_domestic_blocked: bool = False
+    # Speed (Mbps). None = not tested.
+    speed_mbps: Optional[float] = None
+    speed_blocked: bool = False
 
     # Geolocation
     exit_ip: Optional[str] = None
@@ -73,8 +71,7 @@ class AirportMetrics:
     median_latency: Optional[float] = None   # median of per-node medians
     p95_latency: Optional[float] = None      # median of per-node P95s
     avg_jitter: Optional[float] = None
-    avg_speed_intl: Optional[float] = None
-    avg_speed_domestic: Optional[float] = None
+    avg_speed: Optional[float] = None
 
     def compute_aggregate(self) -> None:
         """Compute airport-level stats from node metrics."""
@@ -94,18 +91,10 @@ class AirportMetrics:
         if jitters:
             self.avg_jitter = statistics.mean(jitters)
 
-        intl_speeds = [
-            n.speed_intl_mbps
+        speeds = [
+            n.speed_mbps
             for n in alive
-            if n.speed_intl_mbps is not None and not n.speed_intl_blocked
+            if n.speed_mbps is not None and not n.speed_blocked
         ]
-        if intl_speeds:
-            self.avg_speed_intl = statistics.mean(intl_speeds)
-
-        dom_speeds = [
-            n.speed_domestic_mbps
-            for n in alive
-            if n.speed_domestic_mbps is not None and not n.speed_domestic_blocked
-        ]
-        if dom_speeds:
-            self.avg_speed_domestic = statistics.mean(dom_speeds)
+        if speeds:
+            self.avg_speed = statistics.mean(speeds)

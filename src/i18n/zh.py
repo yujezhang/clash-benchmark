@@ -28,8 +28,7 @@ STRINGS = {
     "col_median_lat": "延迟中位数",
     "col_p95_lat": "P95 延迟",
     "col_jitter": "抖动",
-    "col_speed_intl": "速度（国际）",
-    "col_speed_domestic": "速度（国内）",
+    "col_speed": "速度",
 
     # Table headers - node detail
     "table_node_title": "节点详情",

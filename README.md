@@ -83,7 +83,8 @@ python main.py [FILE_OR_URL ...] [OPTIONS]
   --export JSON|CSV     导出结果文件
   --export-file PATH    导出文件路径
   --concurrency N       并发延迟测试数（默认：30）
-  --speed-workers N     并发速度测试 worker 数（默认：5）
+  --speed-workers N     并发速度测试 worker 数——越多越快但结果偏低（默认：1）
+  --speed-connections N 每次测速的并行 TCP 连接数（默认：16）
   --sort-by FIELD       节点排序字段：latency|p95|speed|name（默认：latency）
   --filter-dead         隐藏不可用节点
   --lang en|zh          输出语言（默认：自动检测）
@@ -98,11 +99,10 @@ python main.py [FILE_OR_URL ...] [OPTIONS]
 | P95 延迟 | 10 轮测试的第 95 百分位，反映"偶尔卡顿"的情况 |
 | 抖动 | 10 轮延迟的标准差，反映稳定性 |
 | 丢包率 | 10 轮中超时的比例 |
-| 国际速度 | 通过节点下载 Cloudflare 测速文件（10MB），测两次取低值 |
-| 国内速度 | 通过节点下载国内可访问文件（10MB），测两次取低值 |
+| 速度 | 16 条并行 TCP 连接持续下载 10 秒，取总吞吐量（Mbps） |
 | 地理位置 | 通过节点请求 ip-api.com 获取出口 IP 信息 |
 
-> **注意**：本工具为单次测试，结果受测试时间影响。建议在晚高峰（20:00-23:00）运行，以获得更具代表性的数据。QoS 限速可能无法被完全检测到（通过同一 URL 测速两次取低值可部分识别）。
+> **注意**：本工具为单次测试，结果受测试时间影响。建议在晚高峰（20:00-23:00）运行，以获得更具代表性的数据。QoS 限速可能无法被完全检测到。
 
 ---
 
@@ -181,7 +181,8 @@ Options:
   --export JSON|CSV     Export results to file
   --export-file PATH    Export file path
   --concurrency N       Max parallel latency tests (default: 30)
-  --speed-workers N     Parallel speed test workers (default: 5)
+  --speed-workers N     Parallel speed test workers — more = faster but less accurate (default: 1)
+  --speed-connections N Parallel TCP connections per speed measurement (default: 16)
   --sort-by FIELD       Sort nodes by: latency|p95|speed|name (default: latency)
   --filter-dead         Hide dead nodes from output
   --lang en|zh          Output language (default: auto-detect)
@@ -196,11 +197,10 @@ Options:
 | P95 latency | 95th percentile of 10 rounds — measures occasional slowness |
 | Jitter | Standard deviation of 10 rounds — measures stability |
 | Loss rate | Fraction of rounds that timed out |
-| International speed | Download 10MB via Cloudflare, twice, report lower value |
-| Domestic speed | Download 10MB via domestic-accessible URL, twice, report lower value |
+| Speed | 16 parallel TCP connections downloading for 10 seconds, report aggregate throughput (Mbps) |
 | Geolocation | Request ip-api.com through the node's proxy |
 
-> **Note**: Results are from a single test session and depend on the time of day. For peak-hour accuracy, run during 20:00–23:00 local time. QoS throttling may not be fully detected (downloading twice and taking the lower value provides partial detection).
+> **Note**: Results are from a single test session and depend on the time of day. For peak-hour accuracy, run during 20:00–23:00 local time. QoS throttling may not be fully detected.
 
 ### Why mihomo?
 
