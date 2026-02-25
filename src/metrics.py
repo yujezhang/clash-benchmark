@@ -63,6 +63,7 @@ class NodeMetrics:
 class AirportMetrics:
     name: str
     total_nodes: int = 0
+    tested_nodes: int = 0   # nodes actually tested (may differ from total if sampled)
     alive_nodes: int = 0
     nodes: list[NodeMetrics] = field(default_factory=list)
 
@@ -75,9 +76,10 @@ class AirportMetrics:
 
     def compute_aggregate(self) -> None:
         """Compute airport-level stats from node metrics."""
+        self.tested_nodes = len(self.nodes)
         alive = [n for n in self.nodes if n.is_alive]
         self.alive_nodes = len(alive)
-        self.alive_rate = self.alive_nodes / self.total_nodes if self.total_nodes else 0.0
+        self.alive_rate = self.alive_nodes / self.tested_nodes if self.tested_nodes else 0.0
 
         medians = [n.latency_median for n in alive if n.latency_median is not None]
         if medians:

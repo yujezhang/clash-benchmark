@@ -27,6 +27,10 @@ _SPEED_URLS: list[str] = [
     "http://download.thinkbroadband.com/100MB.zip",
 ]
 
+# Warmup duration (seconds) before measuring steady-state throughput.
+# TCP slow-start needs time to ramp up; bytes during warmup are discarded.
+_WARMUP_S = 2
+
 
 @dataclass
 class TestConfig:
@@ -35,7 +39,7 @@ class TestConfig:
     latency_timeout_ms: int = 5000
     latency_concurrency: int = 30
     speed_workers: int = 1
-    speed_timeout_s: int = 10   # download duration (seconds)
+    speed_timeout_s: int = 5    # steady-state measurement window (seconds)
     speed_connections: int = 16  # parallel TCP connections per measurement
     enable_speed: bool = True
     enable_geo: bool = True
@@ -136,18 +140,20 @@ async def run_speed_tests(
     async def worker() -> None:
         async with MihomoInstance(nodes, mihomo_bin) as instance:
             async with aiohttp.ClientSession() as ctrl_session:
+                cached_url: Optional[str] = None
                 while True:
                     node = await queue.get()
                     if node is None:
                         break
                     name = node["name"]
                     m = metrics_map[name]
-                    # Timeout: probe (~10s worst case) + measurement + buffer
-                    node_timeout = 10 + config.speed_timeout_s + 20
+                    # Timeout: probe (~10s worst case) + warmup + measurement + buffer
+                    node_timeout = 10 + _WARMUP_S + config.speed_timeout_s + 20
                     try:
-                        await asyncio.wait_for(
+                        cached_url = await asyncio.wait_for(
                             _test_node_speed(
-                                instance, ctrl_session, name, m, config
+                                instance, ctrl_session, name, m, config,
+                                cached_url=cached_url,
                             ),
                             timeout=node_timeout,
                         )
@@ -168,19 +174,23 @@ async def _test_node_speed(
     name: str,
     m: NodeMetrics,
     config: TestConfig,
-) -> None:
-    """Switch mihomo to the given node and run a single speed test."""
+    cached_url: Optional[str] = None,
+) -> Optional[str]:
+    """Switch mihomo to the given node and run a single speed test.
+    Returns the working download URL for reuse by subsequent nodes."""
     await instance.select_node(name, ctrl_session)
     await asyncio.sleep(0.3)
 
-    mbps = await _measure_speed(
+    mbps, used_url = await _measure_speed(
         instance.socks5_url,
         _SPEED_URLS,
         config.speed_timeout_s,
         config.speed_connections,
+        cached_url=cached_url,
     )
     m.speed_mbps = mbps
     m.speed_blocked = mbps is None
+    return used_url
 
 
 async def _measure_speed(
@@ -188,15 +198,26 @@ async def _measure_speed(
     urls: list[str],
     duration_s: int,
     connections: int,
-) -> Optional[float]:
+    cached_url: Optional[str] = None,
+) -> tuple[Optional[float], Optional[str]]:
     """
     Probe URLs in order to find the first reachable one, then run a full
-    time-based parallel download. Returns speed in Mbps, or None.
+    time-based parallel download. Returns (speed in Mbps, working URL),
+    or (None, cached_url) on failure.
+    If cached_url is provided, skip probing and use it directly;
+    fall back to full probe if the cached URL yields no data.
     """
+    if cached_url is not None:
+        result = await _parallel_speed(socks5_url, cached_url, duration_s, connections)
+        if result is not None:
+            return result, cached_url
+        # Cached URL failed for this node; fall through to full probe
+
     url = await _probe_url(socks5_url, urls)
     if url is None:
-        return None
-    return await _parallel_speed(socks5_url, url, duration_s, connections)
+        return None, cached_url
+    result = await _parallel_speed(socks5_url, url, duration_s, connections)
+    return result, url
 
 
 async def _probe_url(socks5_url: str, urls: list[str]) -> Optional[str]:
@@ -230,13 +251,13 @@ async def _parallel_speed(
 ) -> Optional[float]:
     """
     Measure aggregate download speed using parallel TCP connections.
-    Each connection downloads the file in a loop for duration_s seconds,
-    using HTTP keep-alive to maintain TCP congestion window across
-    re-downloads and avoid repeated slow-start.
-    Returns speed in Mbps, or None on failure.
+    Runs a warmup phase (_WARMUP_S) to let TCP slow-start ramp up,
+    then resets byte counters and measures steady-state throughput
+    for duration_s seconds. Returns speed in Mbps, or None on failure.
     """
+    total_time = _WARMUP_S + duration_s
     start = time.monotonic()
-    deadline = start + duration_s
+    deadline = start + total_time
     # Shared mutable counters: each connection accumulates bytes here.
     # Reading counters is safe even if the owning task is cancelled.
     counters = [[0] for _ in range(connections)]
@@ -247,6 +268,14 @@ async def _parallel_speed(
         )
         for i in range(connections)
     ]
+
+    # Warmup phase: let TCP slow-start ramp up across all connections
+    await asyncio.sleep(_WARMUP_S)
+
+    # Reset counters — only measure steady-state throughput
+    measure_start = time.monotonic()
+    for c in counters:
+        c[0] = 0
 
     # Tasks self-terminate at deadline. Safety timeout prevents indefinite hang.
     try:
@@ -265,7 +294,7 @@ async def _parallel_speed(
         except Exception:
             pass
 
-    elapsed = time.monotonic() - start
+    elapsed = time.monotonic() - measure_start
     total_bytes = sum(c[0] for c in counters)
 
     if total_bytes == 0 or elapsed < 0.5:

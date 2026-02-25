@@ -158,7 +158,7 @@ def print_airport_table(airports: list[AirportMetrics], enable_speed: bool) -> N
     for ap in airports:
         row = [
             ap.name,
-            (_fmt_alive(ap.alive_nodes, ap.total_nodes, ap.alive_rate),
+            (_fmt_alive(ap.alive_nodes, ap.tested_nodes, ap.alive_rate),
              _alive_rate_style(ap.alive_rate)),
             (_fmt_ms(ap.median_latency, dead_label), _lat_style(ap.median_latency)),
             (_fmt_ms(ap.p95_latency, dead_label), _p95_style(ap.p95_latency)),
@@ -327,6 +327,7 @@ def export_json(airports: list[AirportMetrics], path: str) -> None:
         return {
             "name": ap.name,
             "total_nodes": ap.total_nodes,
+            "tested_nodes": ap.tested_nodes,
             "alive_nodes": ap.alive_nodes,
             "alive_rate": ap.alive_rate,
             "median_latency_ms": ap.median_latency,
