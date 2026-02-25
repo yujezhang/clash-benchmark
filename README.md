@@ -47,6 +47,15 @@ python main.py /path/to/airport-a.yaml https://airport-b.com/subscribe/abc123def
 # 仅测延迟（更快）
 python main.py /path/to/airport.yaml --no-speed
 
+# 只测香港和日本节点（按节点名中的国旗 emoji 或关键词匹配）
+python main.py /path/to/airport.yaml --region HK JP
+
+# 每个机场随机抽 5 个节点快速摸底
+python main.py /path/to/airport.yaml --sample 5
+
+# 两者组合：从香港节点中随机抽 5 个测试
+python main.py /path/to/airport.yaml --region HK --sample 5
+
 # 中文输出
 python main.py /path/to/airport.yaml --lang zh
 
@@ -143,6 +152,15 @@ python main.py /path/to/airport-a.yaml https://example.com/airport-b/abc123def45
 
 # Latency only (faster)
 python main.py /path/to/airport.yaml --no-speed
+
+# Only test Hong Kong and Japan nodes (matches flag emoji or keyword in node name)
+python main.py /path/to/airport.yaml --region HK JP
+
+# Randomly sample 5 nodes per airport for a quick overview
+python main.py /path/to/airport.yaml --sample 5
+
+# Combine both: sample 5 from Hong Kong nodes only
+python main.py /path/to/airport.yaml --region HK --sample 5
 
 # English output
 python main.py /path/to/airport.yaml --lang en
