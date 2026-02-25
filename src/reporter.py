@@ -122,13 +122,6 @@ def _fmt_region(m: NodeMetrics) -> str:
     return "/".join(parts) if parts else "-"
 
 
-def _src_abbr(name: str) -> str:
-    """Return up to 4-char uppercase abbreviation of source name."""
-    words = name.split()
-    if len(words) >= 2:
-        return ("".join(w[0] for w in words[:4])).upper()
-    return name[:4].upper()
-
 
 # ---------------------------------------------------------------------------
 # Layer 1: Airport comparison table
@@ -196,9 +189,7 @@ def print_node_table(
     filter_dead: bool = False,
 ) -> None:
     all_nodes: list[NodeMetrics] = []
-    src_abbrs: dict[str, str] = {}
     for ap in airports:
-        src_abbrs[ap.name] = _src_abbr(ap.name)
         all_nodes.extend(ap.nodes)
 
     # Sort: alive first, then by chosen key, dead at bottom
@@ -228,7 +219,7 @@ def print_node_table(
     )
 
     table.add_column(t("col_node"), min_width=20, no_wrap=False)
-    table.add_column(t("col_src"), min_width=4)
+    table.add_column(t("col_src"), min_width=8)
     table.add_column(t("col_type"), min_width=6)
     table.add_column(t("col_median_lat"), justify="right", min_width=8)
     table.add_column(t("col_p95_lat"), justify="right", min_width=8)
@@ -259,7 +250,7 @@ def print_node_table(
 
         row = [
             m.node_name,
-            src_abbrs.get(m.source_name, m.source_name[:4]),
+            m.source_name,
             m.node_type,
             median_cell,
             p95_cell,
