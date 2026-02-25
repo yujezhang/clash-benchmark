@@ -85,6 +85,7 @@ python main.py [FILE_OR_URL ...] [OPTIONS]
   --latency-concurrency N 延迟测试并发数（默认：30）
   --speed-connections N 每次测速的并行 TCP 连接数（默认：16）
   --sample N            每个机场随机抽样 N 个节点测试（默认：0 = 全部测试）
+  --region KEYWORD ...  只测试名称匹配指定地区的节点（按节点名过滤，非实际地理位置）
   --sort-by FIELD       节点排序字段：latency|p95|speed|name（默认：latency）
   --filter-dead         隐藏不可用节点
   --lang en|zh          输出语言（默认：自动检测）
@@ -183,6 +184,7 @@ Options:
   --latency-concurrency N Max parallel latency tests (default: 30)
   --speed-connections N Parallel TCP connections per speed measurement (default: 16)
   --sample N            Randomly sample N nodes per airport (default: 0 = test all)
+  --region KEYWORD ...  Only test nodes matching region keywords in name (not geolocation)
   --sort-by FIELD       Sort nodes by: latency|p95|speed|name (default: latency)
   --filter-dead         Hide dead nodes from output
   --lang en|zh          Output language (default: auto-detect)

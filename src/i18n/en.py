@@ -62,4 +62,8 @@ STRINGS = {
     "url_parse_failed": "Warning: failed to parse content from {url}: {error}",
     "mihomo_start_failed": "Error: failed to start mihomo: {error}",
     "mihomo_timeout": "Error: mihomo did not become ready within {timeout}s",
+
+    # Region filter
+    "region_no_match": "⚠ {name}: no nodes matching region filter, skipped",
+    "region_all_empty": "Error: no nodes remain after region filtering across all airports",
 }

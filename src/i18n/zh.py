@@ -62,4 +62,8 @@ STRINGS = {
     "url_parse_failed": "警告：解析 {url} 内容失败：{error}",
     "mihomo_start_failed": "错误：mihomo 启动失败：{error}",
     "mihomo_timeout": "错误：mihomo 在 {timeout} 秒内未就绪",
+
+    # Region filter
+    "region_no_match": "⚠ {name}：没有匹配地区筛选条件的节点，已跳过",
+    "region_all_empty": "错误：所有机场经地区筛选后均无匹配节点",
 }

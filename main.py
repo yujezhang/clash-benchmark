@@ -98,6 +98,13 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="N",
         help="Randomly sample N nodes per airport (default: 0 = test all)",
     )
+    p.add_argument(
+        "--region",
+        nargs="+",
+        default=None,
+        metavar="KEYWORD",
+        help="Only test nodes whose name matches the given region keywords",
+    )
     return p
 
 
@@ -141,6 +148,28 @@ def _resolve_inputs(args) -> list[tuple[str, str, str]]:
             sys.exit(1)
 
     return sources
+
+
+# ---------------------------------------------------------------------------
+# Region filtering
+# ---------------------------------------------------------------------------
+
+def _name_matches(name: str, matchers: list[str]) -> bool:
+    lower = name.lower()
+    return any(m in lower or m in name for m in matchers)
+
+
+def _filter_by_region(nodes: list[dict], keywords: list[str]) -> list[dict]:
+    """Filter nodes whose name matches any keyword (substring or flag emoji)."""
+    matchers = []
+    for kw in keywords:
+        matchers.append(kw.lower())
+        # Convert 2-letter ASCII code to flag emoji (e.g. HK → 🇭🇰)
+        if len(kw) == 2 and kw.isascii() and kw.isalpha():
+            flag = chr(0x1F1E6 + ord(kw[0].upper()) - ord('A')) + \
+                   chr(0x1F1E6 + ord(kw[1].upper()) - ord('A'))
+            matchers.append(flag)
+    return [n for n in nodes if _name_matches(n["name"], matchers)]
 
 
 # ---------------------------------------------------------------------------
@@ -195,6 +224,18 @@ async def run(args) -> None:
 
     # Deduplicate names globally across all sources
     all_nodes = deduplicate_names(all_nodes)
+
+    # Region filter (before sampling)
+    if args.region:
+        all_nodes = _filter_by_region(all_nodes, args.region)
+        for ap in airports[:]:
+            ap_count = sum(1 for n in all_nodes if n.get("_source") == ap.name)
+            if ap_count == 0:
+                console.print(t("region_no_match", name=ap.name), style="yellow")
+                airports.remove(ap)
+        if not airports:
+            console.print(t("region_all_empty"), style="red")
+            sys.exit(1)
 
     # Sample nodes per airport if --sample is set
     if args.sample > 0:
