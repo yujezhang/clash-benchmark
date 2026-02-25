@@ -83,7 +83,6 @@ python main.py [FILE_OR_URL ...] [OPTIONS]
   --export JSON|CSV     导出结果文件
   --export-file PATH    导出文件路径
   --concurrency N       并发延迟测试数（默认：30）
-  --speed-workers N     并发速度测试 worker 数——越多越快但结果偏低（默认：1）
   --speed-connections N 每次测速的并行 TCP 连接数（默认：16）
   --sort-by FIELD       节点排序字段：latency|p95|speed|name（默认：latency）
   --filter-dead         隐藏不可用节点
@@ -181,7 +180,6 @@ Options:
   --export JSON|CSV     Export results to file
   --export-file PATH    Export file path
   --concurrency N       Max parallel latency tests (default: 30)
-  --speed-workers N     Parallel speed test workers — more = faster but less accurate (default: 1)
   --speed-connections N Parallel TCP connections per speed measurement (default: 16)
   --sort-by FIELD       Sort nodes by: latency|p95|speed|name (default: latency)
   --filter-dead         Hide dead nodes from output

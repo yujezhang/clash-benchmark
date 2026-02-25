@@ -65,13 +65,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="Max parallel latency tests (default: 30)",
     )
     p.add_argument(
-        "--speed-workers",
-        type=int,
-        default=1,
-        metavar="N",
-        help="Parallel speed test workers — more workers = faster but less accurate (default: 1)",
-    )
-    p.add_argument(
         "--speed-connections",
         type=int,
         default=16,
@@ -215,7 +208,6 @@ async def run(args) -> None:
 
     config = TestConfig(
         latency_concurrency=args.concurrency,
-        speed_workers=args.speed_workers,
         speed_connections=args.speed_connections,
         enable_speed=enable_speed,
         enable_geo=enable_geo,
