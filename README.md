@@ -109,7 +109,7 @@ python main.py [FILE_OR_URL ...] [OPTIONS]
 | P95 延迟 | 10 轮测试的第 95 百分位，反映"偶尔卡顿"的情况 |
 | 抖动 | 10 轮延迟的标准差，反映稳定性 |
 | 丢包率 | 10 轮中超时的比例 |
-| 速度 | 16 条并行 TCP 连接，2 秒预热 + 5 秒稳态测量，取总吞吐量（Mbps） |
+| 速度 | 16 条并行 TCP 连接下载 8 秒，取总吞吐量（Mbps）。依次尝试 Cloudflare / CacheFly / ThinkBroadband，首个可用的 URL 用于测量 |
 | 地理位置 | 通过节点请求 ip-api.com 获取出口 IP 信息 |
 
 > **注意**：本工具为单次测试，结果受测试时间影响。建议在晚高峰（20:00-23:00）运行，以获得更具代表性的数据。QoS 限速可能无法被完全检测到。
@@ -217,7 +217,7 @@ Options:
 | P95 latency | 95th percentile of 10 rounds — measures occasional slowness |
 | Jitter | Standard deviation of 10 rounds — measures stability |
 | Loss rate | Fraction of rounds that timed out |
-| Speed | 16 parallel TCP connections, 2s warmup + 5s steady-state measurement, report aggregate throughput (Mbps) |
+| Speed | 16 parallel TCP connections downloading for 8s, report aggregate throughput (Mbps). URLs tried in order: Cloudflare / CacheFly / ThinkBroadband; first reachable URL is used |
 | Geolocation | Request ip-api.com through the node's proxy |
 
 > **Note**: Results are from a single test session and depend on the time of day. For peak-hour accuracy, run during 20:00–23:00 local time. QoS throttling may not be fully detected.
