@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import os
+import random
 import sys
 from datetime import datetime
 from typing import Optional
@@ -89,6 +90,13 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         metavar="PATH",
         help="Path to mihomo binary (default: auto-detect from PATH)",
+    )
+    p.add_argument(
+        "--sample",
+        type=int,
+        default=0,
+        metavar="N",
+        help="Randomly sample N nodes per airport (default: 0 = test all)",
     )
     return p
 
@@ -187,6 +195,16 @@ async def run(args) -> None:
 
     # Deduplicate names globally across all sources
     all_nodes = deduplicate_names(all_nodes)
+
+    # Sample nodes per airport if --sample is set
+    if args.sample > 0:
+        sampled_nodes = []
+        for ap in airports:
+            ap_nodes = [n for n in all_nodes if n.get("_source") == ap.name]
+            if len(ap_nodes) > args.sample:
+                ap_nodes = random.sample(ap_nodes, args.sample)
+            sampled_nodes.extend(ap_nodes)
+        all_nodes = sampled_nodes
 
     console.print(t("total_nodes", count=len(all_nodes)))
 
