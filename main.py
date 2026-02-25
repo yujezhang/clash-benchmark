@@ -160,8 +160,7 @@ async def run(args) -> None:
     # Load proxies from each source
     console.print(t("loading_sources"))
     airports: list[AirportMetrics] = []
-    all_nodes: list[dict] = []          # deduplicated across all sources
-    node_to_source: dict[str, str] = {}  # node_name -> airport name
+    all_nodes: list[dict] = []
 
     for name, kind, path in sources:
         try:
@@ -180,9 +179,10 @@ async def run(args) -> None:
         ap = AirportMetrics(name=name, total_nodes=len(real))
         airports.append(ap)
 
+        # Tag each node with its source before global dedup so the mapping
+        # survives name changes caused by deduplication.
         for node in real:
-            node_to_source[str(node.get("name", ""))] = name
-
+            node["_source"] = name
         all_nodes.extend(real)
 
     # Deduplicate names globally across all sources
@@ -190,16 +190,12 @@ async def run(args) -> None:
 
     console.print(t("total_nodes", count=len(all_nodes)))
 
-    # Build metrics map
+    # Build metrics map keyed by (deduplicated) node name
     tested_at = datetime.now()
     metrics_map: dict[str, NodeMetrics] = {}
     for node in all_nodes:
         name = node["name"]
-        src_name = node_to_source.get(name, "")
-        # Handle renamed duplicates: strip " (N)" suffix for source lookup
-        if not src_name:
-            base = name.rsplit(" (", 1)[0]
-            src_name = node_to_source.get(base, "")
+        src_name = node.get("_source", "")
         m = NodeMetrics(
             node_name=name,
             node_type=node.get("type", "unknown"),

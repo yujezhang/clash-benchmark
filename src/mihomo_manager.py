@@ -47,7 +47,7 @@ def _build_config(nodes: list[dict], socks_port: int, api_port: int) -> str:
     # Ensure all node names are strings (safety for yaml serialisation)
     safe_nodes = []
     for n in nodes:
-        node = dict(n)
+        node = {k: v for k, v in n.items() if not k.startswith("_")}
         node["name"] = str(node.get("name", ""))
         safe_nodes.append(node)
 
