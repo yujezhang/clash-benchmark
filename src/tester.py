@@ -85,6 +85,8 @@ async def run_latency_tests(
                     result = None
                 results[node_name][round_idx] = result
                 remaining[node_name] -= 1
+                if remaining[node_name] == 0 and progress_cb:
+                    progress_cb(1)
 
         # Fire all (node x round) tasks concurrently
         tasks = [
@@ -103,8 +105,6 @@ async def run_latency_tests(
             m.latency_samples = samples
             m.latency_loss_rate = timeouts / config.latency_rounds
             m.compute_latency_stats()
-            if progress_cb:
-                progress_cb(1)
 
 
 # ---------------------------------------------------------------------------
